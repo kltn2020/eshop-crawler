@@ -6,7 +6,9 @@
       {
         "root": ["./src"],
         "alias": {
-          "@root": "./src"
+          "@root": "./src",
+          "@queue": "./src/queue",
+          "@consumer": "./src/consumer"
         }
       }
     ],

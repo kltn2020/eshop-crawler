@@ -2,7 +2,9 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@root/*": ["src/*"]
+      "@root/*": ["src/*"],
+      "@queue/*": ["src/queue/*"],
+      "@consumer/*": ["src/consumer/*"]
     }
   }
 }

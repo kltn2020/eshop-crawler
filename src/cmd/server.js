@@ -3,6 +3,7 @@ import cors from 'cors'
 import http from 'http'
 import bodyParser from 'body-parser'
 import { UI } from 'bull-board'
+import queue from '@queue'
 
 const app = express()
 const server = http.Server(app)
@@ -21,6 +22,10 @@ app.get('/api/ping', (_, res) => {
 })
 
 app.use('/queues', UI)
+app.get('/tgdd', (req, res) => {
+  queue.crawlTGDD.add({ url: req.query.url })
+  res.json({ msg: 'ok' })
+})
 
 app.use((error, req, res, _next) => {
   res.status(500).json({
