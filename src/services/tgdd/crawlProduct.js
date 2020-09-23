@@ -4,7 +4,6 @@ import { parse } from 'node-html-parser'
 import TgddProduct from '@models/TgddProduct'
 import cheerio from 'cheerio'
 
-const productIDRegex = /productid=(\d+)/
 const PRODUCT_URL =
   'https://www.thegioididong.com/aj/ProductV4/GetFullSpec?productID='
 
@@ -46,12 +45,6 @@ async function getImages($, selector) {
   return imgs
 }
 
-async function getHref($, selector) {
-  let value = $(selector).attr('href')
-
-  return value.match(productIDRegex)[1]
-}
-
 function convertText(input) {
   input = input.toString()
   convertData.forEach((t) => (input = input.replace(t.char, t.trans)))
@@ -63,6 +56,15 @@ async function getProduct(productID) {
     const { data } = await axios.get(`${PRODUCT_URL}${productID}`)
 
     const text = data['spec'].replace(/\r\n/, '')
+
+    let index
+
+    if (text.match(/Model Adapter sạc/)) {
+      index = 0
+    } else {
+      index = -1
+    }
+
     const root = parse(text)
 
     const rawData = root
@@ -71,8 +73,8 @@ async function getProduct(productID) {
       .map((t) => convertText(t))
 
     const webcam = rawData[20]
-    const weight = rawData[28]
-    const material = rawData[29]
+    const weight = rawData[28 + index]
+    const material = rawData[29 + index]
 
     return { webcam, weight, material }
   } catch (error) {
@@ -110,7 +112,7 @@ async function getData(url) {
     await getValue($, 'ul.parameter li:nth-child(4) div')
   ).match(/\((.*?)\)/)[1]
 
-  const productID = await getHref($, '.d2 a')
+  const productID = $('#hdfProductID').val()
 
   const { webcam, weight, material } = await getProduct(productID)
 
