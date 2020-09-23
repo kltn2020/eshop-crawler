@@ -1,6 +1,8 @@
 import puppeteer from 'puppeteer'
 import axios from 'axios'
 import { parse } from 'node-html-parser'
+import TgddProduct from '@models/TgddProduct'
+import cheerio from 'cheerio'
 
 const productIDRegex = /productid=(\d+)/
 const PRODUCT_URL =
@@ -21,30 +23,38 @@ const convertData = [
   { char: /\r\n/g, trans: '' },
   { char: /\s\s/g, trans: '' },
 ]
-async function getValue(page, selector) {
-  const element = await page.$(selector)
-  const value = await (await element.getProperty('textContent')).jsonValue()
 
-  return value
+async function getValue($, selector) {
+  try {
+    let value = $(selector).text()
+
+    return value
+  } catch (error) {
+    return ''
+  }
 }
 
-async function getImages(page, selector) {
-  const imgs = await page.$$eval(selector, imgs =>
-    imgs.map(img => img.getAttribute('src')),
-  )
+async function getImages($, selector) {
+  let imgs = []
+
+  $(selector).each(function (i, ele) {
+    let img = $(ele).attr('src')
+
+    imgs.push(img)
+  })
 
   return imgs
 }
 
-async function getHref(page, selector) {
-  const hrefs = await page.$$eval(selector, as => as.map(a => a.href))
+async function getHref($, selector) {
+  let value = $(selector).attr('href')
 
-  return hrefs[0].match(productIDRegex)[1]
+  return value.match(productIDRegex)[1]
 }
 
 function convertText(input) {
   input = input.toString()
-  convertData.forEach(t => (input = input.replace(t.char, t.trans)))
+  convertData.forEach((t) => (input = input.replace(t.char, t.trans)))
   return input.trim()
 }
 
@@ -57,8 +67,8 @@ async function getProduct(productID) {
 
     const rawData = root
       .querySelectorAll('li div')
-      .map(t => t.rawText)
-      .map(t => convertText(t))
+      .map((t) => t.rawText)
+      .map((t) => convertText(t))
 
     const webcam = rawData[20]
     const weight = rawData[28]
@@ -75,27 +85,32 @@ async function getData(url) {
   const page = await browser.newPage()
   await page.goto(url)
 
-  const name = await getValue(page, '.rowtop h1')
-  const images = await getImages(page, '.picture .icon-position img[src]')
-  const discountPrice = await getValue(page, '.area_price strong')
-  const price = await getValue(page, '.hisprice')
-  const cpu = await getValue(page, 'ul.parameter li:nth-child(1) div')
-  const gpu = await getValue(page, 'ul.parameter li:nth-child(5) div')
-  const os = await getValue(page, 'ul.parameter li:nth-child(7) div')
-  const ram = await getValue(page, 'ul.parameter li:nth-child(2) div')
-  const display = (
-    await getValue(page, 'ul.parameter li:nth-child(4) div')
-  ).match(/^(.+?),/)[1]
+  let content = await page.content()
+  var $ = cheerio.load(content)
+
+  const name = await getValue($, '.rowtop h1')
+  const images = await getImages($, '.picture .icon-position img')
+  const discountPrice = (await getValue($, '.area_price strong'))
+    .match(/\d+/g)
+    ?.join([])
+  const price = (await getValue($, '.hisprice')).match(/\d+/g)?.join([])
+  const cpu = await getValue($, 'ul.parameter li:nth-child(1) div')
+  const gpu = await getValue($, 'ul.parameter li:nth-child(5) div')
+  const os = await getValue($, 'ul.parameter li:nth-child(7) div')
+  const ram = await getValue($, 'ul.parameter li:nth-child(2) div')
+  const display = (await getValue($, 'ul.parameter li:nth-child(4) div')).match(
+    /^(.+?),/,
+  )[1]
   const displayResolution = (
-    await getValue(page, 'ul.parameter li:nth-child(4) div')
+    await getValue($, 'ul.parameter li:nth-child(4) div')
   )
     .match(/\,(.*?)\(/)[1]
     .trim()
   const displayScreen = (
-    await getValue(page, 'ul.parameter li:nth-child(4) div')
+    await getValue($, 'ul.parameter li:nth-child(4) div')
   ).match(/\((.*?)\)/)[1]
 
-  const productID = await getHref(page, '.d2 a')
+  const productID = await getHref($, '.d2 a')
 
   const { webcam, weight, material } = await getProduct(productID)
 
@@ -119,10 +134,12 @@ async function getData(url) {
   }
 }
 
-;(async () => {
-  const data = await getData(
-    'https://www.thegioididong.com/laptop/lenovo-ideapad-s145-81w8001xvn',
-  )
+async function saveData(data) {
+  let product = new TgddProduct({ ...data })
 
-  console.log(data)
-})()
+  await product.save()
+
+  return product
+}
+
+export { saveData, getData }

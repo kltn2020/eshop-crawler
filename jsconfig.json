@@ -4,7 +4,9 @@
     "paths": {
       "@root/*": ["src/*"],
       "@queue/*": ["src/queue/*"],
-      "@consumer/*": ["src/consumer/*"]
+      "@consumer/*": ["src/consumer/*"],
+      "@models/*": ["src/models/*"],
+      "@services/*": ["src/services/*"]
     }
   }
 }
