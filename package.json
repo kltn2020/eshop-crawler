@@ -24,8 +24,11 @@
     "ioredis": "^4.17.3",
     "mongoose": "^5.10.6",
     "node-html-parser": "^1.2.20",
+    "pg": "^8.3.3",
+    "pg-hstore": "^2.3.3",
     "puppeteer": "^5.3.1",
-    "redis": "^3.0.2"
+    "redis": "^3.0.2",
+    "sequelize": "^6.3.5"
   },
   "devDependencies": {
     "@babel/cli": "^7.11.6",

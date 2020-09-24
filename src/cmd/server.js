@@ -4,6 +4,8 @@ import http from 'http'
 import bodyParser from 'body-parser'
 import { UI } from 'bull-board'
 import queue from '@queue'
+import Product from '@models/Product'
+import TgddProduct from '@models/TgddProduct'
 
 const app = express()
 const server = http.Server(app)
@@ -24,6 +26,33 @@ app.get('/api/ping', (_, res) => {
 app.use('/queues', UI)
 app.get('/tgdd', (req, res) => {
   queue.crawlTGDD.add({ url: req.query.url })
+  res.json({ msg: 'ok' })
+})
+
+app.get('/tgddImport', async (req, res) => {
+  const data = await TgddProduct.find({})
+
+  let promises = []
+
+  for (let index = 0; index < data.length; index++) {
+    const element = data[index]
+
+    const product = Product.build({ ...element.toJSON() })
+
+    product.images = product.images.map((t) => {
+      return { url: t }
+    })
+
+    product.categoryId = 1
+    product.brandId = 1
+
+    const promise = product.save()
+
+    promises << promise
+  }
+
+  Promise.all(promises)
+
   res.json({ msg: 'ok' })
 })
 
