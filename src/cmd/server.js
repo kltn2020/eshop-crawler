@@ -9,6 +9,8 @@ import TgddRating from '@models/TgddRating'
 import TgddProduct from '@models/TgddProduct'
 import Product from '@root/models/Product'
 import Review from '@root/models/Review'
+import FptRating from '@models/FptRating'
+import FptProduct from '@models/FptProduct'
 
 const app = express()
 const server = http.Server(app)
@@ -29,6 +31,11 @@ app.get('/api/ping', (_, res) => {
 app.use('/queues', UI)
 app.get('/tgdd', (req, res) => {
   queue.crawlTGDD.add({ url: req.query.url })
+  res.json({ msg: 'ok' })
+})
+
+app.get('/fpt', (req, res) => {
+  queue.crawlFPT.add({ url: req.query.url })
   res.json({ msg: 'ok' })
 })
 
@@ -73,6 +80,41 @@ function xoa_dau(str) {
   str = str.replace(/\s/g, '')
   return str
 }
+
+app.get('/fptImport', async (req, res) => {
+  const data = await FptProduct.find({})
+
+  for (let index = 0; index < 1; index++) {
+    const element = data[index]
+
+    let product = new Product({ ...element.toJSON() })
+    product.sku = `FPT${index + 1}`
+    product.brandId = findBrand(product.name)
+    product.categoryId = 1
+
+    await product.save()
+
+    const dataRating = await FptRating.find({ product: element })
+
+    for (let ratingIndex = 0; ratingIndex < dataRating.length; ratingIndex++) {
+      const ele = dataRating[ratingIndex]
+
+      const { point, number } = ele
+
+      for (let j = 0; j < number; j++) {
+        const review = new Review({
+          content: 'fpt',
+          point: point,
+          productId: product.id,
+        })
+
+        await review.save()
+      }
+    }
+  }
+
+  res.json({ msg: 'ok' })
+})
 
 app.get('/tgddImport', async (req, res) => {
   const data = await TgddRating.find({})
